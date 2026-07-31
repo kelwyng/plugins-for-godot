@@ -50,7 +50,7 @@ public:
 		textures[p_idx].dirty_usages = textures[p_idx].required_usages;
 	}
 
-	bool update(id<MTLCommandBuffer> p_command_buffer);
+	bool update(id<MTLCommandBuffer> p_command_buffer, bool &r_needs_godot_frame);
 
 	swift::Optional<GodotRealityKit::TextureResource> find_resource(godot::RID p_texture_rid, TextureUsage p_usage = TextureUsage::Rendering) const {
 		if (!p_texture_rid.is_valid()) {
