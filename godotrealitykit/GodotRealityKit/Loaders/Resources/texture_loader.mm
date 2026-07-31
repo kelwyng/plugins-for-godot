@@ -48,9 +48,10 @@ uint32_t TextureLoader::find_or_add(godot::RID p_texture_rid, godot::Ref<godot::
 	return idx;
 }
 
-bool TextureLoader::update(id<MTLCommandBuffer> p_command_buffer) {
+bool TextureLoader::update(id<MTLCommandBuffer> p_command_buffer, bool &r_needs_godot_frame) {
 	PROFILE_FUNC_SCOPE;
 
+	bool has_pending_usages = false;
 	for_each_valid([&](uint32_t idx) {
 		if (textures[idx].is_viewport_texture) {
 			mark_dirty(idx);
@@ -160,11 +161,13 @@ bool TextureLoader::update(id<MTLCommandBuffer> p_command_buffer) {
 		texture.dirty_usages &= ~processed_usages;
 		if (texture.dirty_usages == 0) {
 			dirty_idxs.remove(idx);
+		} else {
+			has_pending_usages = true;
 		}
 	});
 
-	// Dynamic textures such as Label3D font atlases can be temporarily unavailable
-	// until Godot renders another frame. Keep retrying them without pausing the
-	// SceneTree, otherwise the pause prevents the texture from ever becoming ready.
-	return throttle_finished;
+	// Once every dirty texture has been attempted, remaining usages require Godot
+	// to render another frame before the bridge can finish loading them.
+	r_needs_godot_frame = throttle_finished && has_pending_usages;
+	return throttle_finished && !has_pending_usages;
 }
