@@ -126,7 +126,14 @@ private:
 
 		ERR_FAIL_COND_V(!mesh_to_idx.has(key), nullptr);
 		const uint32_t idx = mesh_to_idx.get(key);
-		return &meshes[idx];
+		const Mesh &mesh = meshes[idx];
+		// Label3D can expose a new surface count before its mesh resources finish rebuilding.
+		// Returning null skips this pass; the dirty loader rebuilds it on the next update.
+		if (p_surface_idx >= mesh.surfaces.size() ||
+				p_surface_idx >= mesh.surface_infos.size()) {
+			return nullptr;
+		}
+		return &mesh;
 	}
 
 	Mesh::SurfaceInfo get_surface_info(const godot::Dictionary &p_surface, godot::RID p_mesh_rid) const;
