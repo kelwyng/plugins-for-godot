@@ -90,7 +90,8 @@ ProgramDescription get_label_material_description(godot::Label3D *p_node, bool p
 	const godot::Ref<godot::Font> font = p_node->get_font();
 	godot::Ref<godot::TextServer> text_server =
 			godot::TextServerManager::get_singleton()->get_primary_interface();
-	if (font.is_valid() && text_server->font_is_multichannel_signed_distance_field(font->get_rid())) {
+	const bool is_msdf = font.is_valid() && text_server->font_is_multichannel_signed_distance_field(font->get_rid());
+	if (is_msdf) {
 		flags |= (1 << BM::FLAG_ALBEDO_TEXTURE_MSDF);
 	}
 
@@ -102,6 +103,7 @@ ProgramDescription get_label_material_description(godot::Label3D *p_node, bool p
 		.texture_filter = p_node->get_texture_filter(),
 		.billboard_mode = p_node->get_billboard_mode(),
 		.flags = flags,
+		.albedo_texture_is_la8_font_atlas = !is_msdf,
 	};
 }
 
