@@ -166,8 +166,11 @@ bool TextureLoader::update(id<MTLCommandBuffer> p_command_buffer, bool &r_needs_
 		}
 	});
 
-	// Once every dirty texture has been attempted, remaining usages require Godot
-	// to render another frame before the bridge can finish loading them.
+	// Reproduce in the GodotRealityKit demo with a Label3D stopwatch that changes
+	// text every frame. Expected: it runs continuously. The old bridge pauses Godot
+	// while an atlas is temporarily unavailable, preventing the frame that makes
+	// that atlas ready and deadlocking the label. Report this specific wait to
+	// SceneLoader so the modified bridge retries while Godot keeps rendering.
 	r_needs_godot_frame = throttle_finished && has_pending_usages;
 	return throttle_finished && !has_pending_usages;
 }

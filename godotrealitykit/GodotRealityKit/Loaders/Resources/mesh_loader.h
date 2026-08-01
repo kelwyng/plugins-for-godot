@@ -127,8 +127,11 @@ private:
 		ERR_FAIL_COND_V(!mesh_to_idx.has(key), nullptr);
 		const uint32_t idx = mesh_to_idx.get(key);
 		const Mesh &mesh = meshes[idx];
-		// Label3D can expose a new surface count before its mesh resources finish rebuilding.
-		// Returning null skips this pass; the dirty loader rebuilds it on the next update.
+		// Reproduce in the GodotRealityKit demo with a Label3D stopwatch whose text
+		// changes every frame. Expected: every new surface appears normally. The old
+		// bridge can observe Godot's new surface count before the corresponding bridge
+		// mesh arrays finish rebuilding, then index past their ends and crash. Returning
+		// null skips only that incomplete pass; the dirty mesh succeeds next update.
 		if (p_surface_idx >= mesh.surfaces.size() ||
 				p_surface_idx >= mesh.surface_infos.size()) {
 			return nullptr;
