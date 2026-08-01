@@ -63,18 +63,6 @@ index 77ef6286fd..62c2bf7720 100644
  }
  
  Transform3D VisionOSXRInterface::RenderThread::get_camera_transform() {
-diff --git a/misc/dist/apple_embedded_xcode/godot_apple_embedded.xcodeproj/xcshareddata/xcschemes/godot_apple_embedded.xcscheme b/misc/dist/apple_embedded_xcode/godot_apple_embedded.xcodeproj/xcshareddata/xcschemes/godot_apple_embedded.xcscheme
-index d61a53d5c2..641f05209e 100644
---- a/misc/dist/apple_embedded_xcode/godot_apple_embedded.xcodeproj/xcshareddata/xcschemes/godot_apple_embedded.xcscheme
-+++ b/misc/dist/apple_embedded_xcode/godot_apple_embedded.xcodeproj/xcshareddata/xcschemes/godot_apple_embedded.xcscheme
-@@ -50,6 +50,7 @@
-       ignoresPersistentStateOnLaunch = "NO"
-       debugDocumentVersioning = "YES"
-       debugServiceExtension = "internal"
-+      enableGPUValidationMode = "1"
-       allowLocationSimulation = "YES">
-       <BuildableProductRunnable
-          runnableDebuggingMode = "0">
 diff --git a/platform/visionos/detect.py b/platform/visionos/detect.py
 index 83aa2a1b80..bc6b9a9552 100644
 --- a/platform/visionos/detect.py
@@ -118,3 +106,42 @@ index 221b8c9f15..6dae58bd45 100644
  
  _MTL_INLINE MTL::TensorExtents* MTL::TensorExtents::alloc()
  {
+diff --git a/platform_methods.py b/platform_methods.py
+index 18b67ead00..c8d6d2a6cb 100644
+--- a/platform_methods.py
++++ b/platform_methods.py
+@@ -359,6 +359,34 @@ def setup_swift_builder(env, apple_platform, sdk_path, current_path, bridging_he
+         "-I./",  # Pass the current directory as the header root so bridging headers can include files from any point of the hierarchy
+     ]
+ 
++    # Xcode 27 exposes SwiftUI property wrappers as external macros. Direct
++    # swift-frontend builds must point at the platform's host macro plugins.
++    swift_plugin_paths = [
++        os.path.normpath(os.path.join(sdk_path, "..", "..", "usr", "lib", "swift", "host", "plugins"))
++    ]
++    if apple_platform == "visionossimulator":
++        swift_plugin_paths.append(
++            os.path.normpath(
++                os.path.join(
++                    sdk_path,
++                    "..",
++                    "..",
++                    "..",
++                    "..",
++                    "XROS.platform",
++                    "Developer",
++                    "usr",
++                    "lib",
++                    "swift",
++                    "host",
++                    "plugins",
++                )
++            )
++        )
++    for swift_plugin_path in swift_plugin_paths:
++        if os.path.isdir(swift_plugin_path):
++            env.Append(SWIFTCFLAGS=["-plugin-path", swift_plugin_path])
++
+     if "osxcross" in env:
+         env.Append(
+             SWIFTCFLAGS=[
