@@ -16,6 +16,7 @@
 #include <TargetConditionals.h>
 #include <godot_cpp/classes/font.hpp>
 #include <godot_cpp/classes/image.hpp>
+#include <godot_cpp/classes/text_server_manager.hpp>
 
 using namespace gdrk;
 
@@ -146,13 +147,19 @@ void LabelLoader::update_deps(
 		const uint32_t material_hash = godot::hash_fmix32(material_hash_state);
 		if (dep_states[idx].material_hash != material_hash || text_dirty) {
 			bool is_outline = false;
+#if !TARGET_OS_SIMULATOR
+			const godot::Ref<godot::Font> font = node->get_font();
+			godot::Ref<godot::TextServer> text_server =
+					godot::TextServerManager::get_singleton()->get_primary_interface();
+			const bool is_msdf = font.is_valid() && text_server->font_is_multichannel_signed_distance_field(font->get_rid());
+#endif
 			for (uint32_t material_idx : add_material_deps(changed_material_deps, materials, idx, node)) {
 				const godot::RID material_rid = materials->get_rid(material_idx);
 				ERR_CONTINUE(!material_rid.is_valid());
 				const godot::RID albedo_texture_rid = rs->material_get_param(material_rid, "texture_albedo");
-				const bool is_msdf = rs->material_get_param(material_rid, "msdf_pixel_range").get_type() != godot::Variant::NIL;
 				bool is_la8_font_atlas = false;
 #if TARGET_OS_SIMULATOR
+				const bool is_msdf = rs->material_get_param(material_rid, "msdf_pixel_range").get_type() != godot::Variant::NIL;
 				// Only LA8 atlases need the Simulator channel swizzle; color glyph atlases are RGBA.
 				is_la8_font_atlas = albedo_texture_rid.is_valid() &&
 						rs->texture_get_format(albedo_texture_rid) == godot::Image::FORMAT_LA8;
