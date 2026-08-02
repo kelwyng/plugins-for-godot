@@ -32,7 +32,7 @@ public:
 		textures.resize(p_capacity);
 	}
 
-	uint32_t find_or_add(godot::RID p_texture_rid, godot::Ref<godot::Texture2D> p_texture = nullptr, TextureUsage p_usage = TextureUsage::Rendering);
+	uint32_t find_or_add(godot::RID p_texture_rid, godot::Ref<godot::Texture2D> p_texture = nullptr, TextureUsage p_usage = TextureUsage::Rendering, bool p_requires_godot_frame = false);
 
 	void remove(uint32_t p_idx) {
 		texture_rid_to_idx.remove(textures[p_idx].texture_rid);
@@ -66,6 +66,7 @@ private:
 	struct Texture {
 		uint8_t required_usages;
 		uint8_t dirty_usages;
+		uint8_t godot_frame_usages = 0;
 		bool is_viewport_texture = false;
 
 		godot::RID texture_rid;
