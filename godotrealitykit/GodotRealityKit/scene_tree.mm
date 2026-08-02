@@ -150,9 +150,7 @@ void SceneLoader::update() {
 
 	bool texture_needs_godot_frame = false;
 	bool finished = textures->update(command_buffer, texture_needs_godot_frame);
-	// TextureLoader documents the changing-Label3D reproduction. Only that
-	// frame-dependent wait may leave Godot running; all other incomplete loaders
-	// retain the existing blocking behavior.
+	// Keep Godot running for frame-generated textures to avoid a circular wait.
 	bool should_block = !finished && !texture_needs_godot_frame;
 	auto update_finished = [&](bool p_finished) {
 		finished &= p_finished;

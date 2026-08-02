@@ -103,8 +103,7 @@ public:
 	}
 
 	bool is_loading(godot::RID p_material_rid) const {
-		// A changing Label3D can expose its new material before registration.
-		// Treat it as loading to preserve the old label instead of indexing a missing RID.
+		// Treat unregistered materials as loading to avoid a missing-RID crash.
 		if (!material_rid_to_idx.has(p_material_rid)) {
 			return true;
 		}

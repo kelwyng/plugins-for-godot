@@ -100,8 +100,7 @@ bool TextureLoader::update(id<MTLCommandBuffer> p_command_buffer, bool &r_needs_
 			}
 			id<MTLTexture> src_texture = (__bridge id<MTLTexture>)(void *)mtl_texture_u64;
 			if (src_texture == nil) {
-				// A newly generated texture may be unavailable for one frame; keep it dirty
-				// so the next update retries it.
+				// Retry temporary unavailability instead of stalling generated textures.
 				continue;
 			}
 			const bool recreate_resource = existing_rid != rd_texture_rid ||
@@ -119,8 +118,7 @@ bool TextureLoader::update(id<MTLCommandBuffer> p_command_buffer, bool &r_needs_
 									.format(godot::Array{ texture_path }));
 				}
 
-				// Publish a new resource when an atlas changes so RealityKit can retire the
-				// texture currently in use without blocking Godot's frame updates.
+				// A regenerated atlas may keep its RID while changing its backing texture.
 				swift::Optional<GodotRealityKit::LowLevelTexture> low_level_texture =
 						GodotRealityKit::LowLevelTexture::init([src_texture textureType],
 								[src_texture pixelFormat],
@@ -132,7 +130,7 @@ bool TextureLoader::update(id<MTLCommandBuffer> p_command_buffer, bool &r_needs_
 								[src_texture usage],
 								[src_texture swizzle]);
 
-				// Keep failed texture creation pending so a later update can retry it.
+				// Keep transient creation failures pending instead of stalling the loader.
 				if (low_level_texture.isNone()) {
 					ERR_PRINT("Failed to create low level texture");
 					continue;
@@ -145,6 +143,7 @@ bool TextureLoader::update(id<MTLCommandBuffer> p_command_buffer, bool &r_needs_
 
 				swift::Optional<GodotRealityKit::TextureResource> resource = GodotRealityKit::TextureResource::init(low_level_texture.get());
 				if (resource.isNone()) {
+					// Retry resource creation instead of aborting the texture pass.
 					ERR_PRINT("Failed to create texture resource");
 					continue;
 				}
@@ -158,6 +157,7 @@ bool TextureLoader::update(id<MTLCommandBuffer> p_command_buffer, bool &r_needs_
 			} else if (rd_texture_rid.is_valid()) {
 				id<MTLTexture> dst_texture = nil;
 				swift::Optional<GodotRealityKit::LowLevelTexture> low_level_texture = swift::Optional<GodotRealityKit::LowLevelTexture>::none();
+				// Missing resources stay pending instead of aborting the texture pass.
 				if (usage == TextureUsage::Rendering) {
 					if (texture.resource_srgb.isNone()) {
 						ERR_PRINT("Missing rendering texture resource");
@@ -179,8 +179,7 @@ bool TextureLoader::update(id<MTLCommandBuffer> p_command_buffer, bool &r_needs_
 			processed_usages |= usage;
 		}
 
-		// MaterialLoader reads the current TextureResource after this update, so it
-		// also picks up a recreated font-atlas resource in the same frame.
+		// Materials update next and pick up the replacement resource.
 		texture.dirty_usages &= ~processed_usages;
 		if (texture.dirty_usages == 0) {
 			dirty_idxs.remove(idx);
@@ -190,7 +189,7 @@ bool TextureLoader::update(id<MTLCommandBuffer> p_command_buffer, bool &r_needs_
 		}
 	});
 
-	// Advance Godot only when every pending usage depends on a future Godot frame.
+	// Advance Godot for frame-dependent textures to avoid a circular wait.
 	r_needs_godot_frame = throttle_finished && has_pending_usages && !has_blocking_pending_usages;
 	return throttle_finished && !has_pending_usages;
 }

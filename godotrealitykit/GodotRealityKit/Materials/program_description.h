@@ -44,11 +44,7 @@ struct BaseMaterial3DDescription {
 	inline bool is_transparent() const { return transparency == godot::BaseMaterial3D::TRANSPARENCY_ALPHA; }
 
 	inline uint32_t hash() const {
-		// Reproduce in the GodotRealityKit demo with a Label3D showing a changing
-		// MultiMesh visible-instance count. Expected: count changes do not hitch.
-		// The old bridge hashed trailing struct padding, missed the program cache,
-		// and recompiled the label material. Hashing named fields makes equal
-		// descriptions stable; the modified bridge reuses the existing program.
+		// Stable field hashes avoid unnecessary shader-compilation stalls.
 		uint32_t state = godot::hash_murmur3_one_64(next_pass.get_id(), HASH_MURMUR3_SEED);
 		state = godot::hash_murmur3_one_32(uint32_t(render_priority), state);
 		state = godot::hash_murmur3_one_32(shading_mode, state);

@@ -64,6 +64,7 @@ auto get_label_material_prop_hasher() {
 			make_object_property(&L::get_texture_filter));
 }
 
+// Match Label3D's fallback behavior when no font is assigned.
 static godot::Ref<godot::Font> get_label_font(godot::Label3D *p_node) {
 	godot::Ref<godot::Font> font = p_node->get_font();
 	if (font.is_null()) {
@@ -72,6 +73,7 @@ static godot::Ref<godot::Font> get_label_font(godot::Label3D *p_node) {
 	return font;
 }
 
+// Glyph membership can change while Godot keeps the same atlas RID.
 static uint32_t get_font_atlas_hash(const godot::Ref<godot::Font> &p_font, godot::HashSet<godot::RID> &r_atlas_rids) {
 	const godot::Ref<godot::TextServer> text_server = godot::TextServerManager::get_singleton()->get_primary_interface();
 	if (p_font.is_null() || text_server.is_null()) {
@@ -222,6 +224,7 @@ void LabelLoader::update_deps(
 				const godot::RID material_rid = materials->get_rid(material_idx);
 				ERR_CONTINUE(!material_rid.is_valid());
 				const godot::RID albedo_texture_rid = rs->material_get_param(material_rid, "texture_albedo");
+				// Generated surfaces can use different atlas formats.
 				const bool is_msdf = rs->material_get_param(material_rid, "msdf_pixel_range").get_type() != godot::Variant::NIL;
 				ProgramDescription desc = get_label_material_description(node, is_outline, is_msdf);
 				if (!is_outline) {
@@ -282,11 +285,11 @@ void LabelLoader::update(const ResourceLoaderSet &p_resource_loaders) {
 		godot::Label3D *node = nodes[idx];
 		ERR_FAIL_NULL(node);
 
+		// Wait for every surface to avoid invalid access and partial replacement.
 		const godot::RID mesh_rid = node->get_base();
 		const uint32_t surface_count = mesh_get_surface_count(mesh_rid);
 		for (uint32_t surface_idx = 0; surface_idx < surface_count; surface_idx++) {
 			if (meshes->find_resource(mesh_rid, 0, surface_idx).isNone()) {
-				// Keep the current label visible until every replacement surface is ready.
 				return;
 			}
 			const godot::RID material_rid = get_surface_material(node, surface_idx).rid;

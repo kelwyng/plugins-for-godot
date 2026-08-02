@@ -667,12 +667,9 @@ static uint32_t hash_object_property_value(const T &p_value) {
 	return godot::Variant(value).hash();
 }
 
-// Reproduce in the GodotRealityKit demo by adding a Label3D with "TEST",
-// assigning a Helvetica SystemFont, and launching the scene. The label should
-// render normally. The unmodified bridge instead crashes while
-// hashing Label3D::get_font because PtrToArg<Ref<T>>::encode expects Godot-owned
-// return storage, not a local uninitialized Ref. Hashing the Ref directly keeps
-// its ownership intact and lets the modified bridge load and update the label.
+// PtrToArg::encode expects engine-owned return storage, not a local uninitialized
+// Ref. Hashing the Ref directly keeps its ownership intact and avoids a crash
+// while loading or updating the label.
 template <typename T>
 static uint32_t hash_object_property_value(const godot::Ref<T> &p_value) {
 	return godot::HashMapHasherDefault::hash(p_value);
